@@ -1,0 +1,82 @@
+* data_generate相关文档
+** 简述
+   从base数据库生成相应的erlang文件作为KV来使用
+
+** 细节
+   细节比较多，想完全了解，建议看代码。
+*** get and all
+#+BEGIN_SRC erlang
+  base_activity() ->
+      Fields = record_info(fields, data_base_activity),
+      NewFields = trans_to_term(Fields, [req_time, value, range, key]),
+      GetGenerateConf = default_get_generate_conf(NewFields, id,  nil),
+      AllGenerateConf = default_all_generate_conf(id),
+      [data_base_activity, base_activity, ["db_base_activity.hrl"],
+       [GetGenerateConf, AllGenerateConf]].
+#+END_SRC
+    这是个比较典型的get和all，先用record_info获取字段，然后可以用trans_to_term（还有trans_to_record和del_fields）对字段做些预处理，具体作用看函数名就知道了。
+
+    接着有个default_get_generate_conf默认get的配置函数，传入(字段, Key, 默认值)就可以，default_all_generate_conf的话，就是传Key。默认值可以不传，统一用[].
+
+    最后返回Args，上层会自动parse的。data_base_activity, base_activity, ["db_base_activity.hrl"]依次是record_name，表名，需要被include的文件。如果约定基础数据的表名和record名字一样，头文件也是在表名的基础上加"db_"的话，只需要传base_activity即可。
+
+    如果，规范的话，那么如下，只需要返回两个参数。
+
+#+BEGIN_SRC erlang
+  base_activity() ->
+      Fields = record_info(fields, data_base_activity),
+      NewFields = trans_to_term(Fields, [req_time, value, range, key]),
+      GetGenerateConf = default_get_generate_conf(NewFields, id),
+      AllGenerateConf = default_all_generate_conf(id),
+      [base_activity, [GetGenerateConf, AllGenerateConf]].
+#+END_SRC
+
+    生成的代码如下
+
+#+BEGIN_SRC erlang
+%% coding: utf-8
+%% Warning:本文件由data_generate自动生成，请不要手动修改
+-module(data_base_activity).
+
+-export([get/1]).
+
+-export([all/0]).
+
+-include("db_base_activity.hrl").
+
+get(10086) ->
+    #data_base_activity{id = 10086, type = 1, category = 1,
+			key = mail, req_time = [{1, [1]}],
+			activity_desc = <<"从2013年11月开始，每天都有新的活动。">>, range = [],
+			value = [], content = <<"[{1,1}]">>,
+			notice = <<"邮件文本内容，每人1元宝">>,
+			start_time = <<"曜日地下城2倍掉蛋率, 土日金钱1.5倍">>, end_time = 0,
+			interval = 86400};
+get(_) -> nil.
+
+all() ->
+    [10086, 10087, 10088, 10089, 10090, 10091, 10092, 10093,
+     10094, 10095, 10096, 10097, 10098].
+#+END_SRC
+
+** with type
+#+BEGIN_SRC erlang
+base_store_product() ->
+    GetGenerateConf = default_get_generate_conf(record_info(fields, base_store_product), id),
+    GetByTypeConf = default_more_generate_conf(get_by_type, type, id),
+    [base_store_product,
+     [GetGenerateConf,
+      GetByTypeConf
+     ]].
+#+END_SRC
+   这里有个根据type返回相应的id list的函数，也是有默认函数，传(FunName, FilterKeyInfo, Id)。其他同上。
+
+** 中阶和高阶
+   如果没有兴趣的话，就只用上面两种基本的方法，满70%的开发需求，别乱搞。有兴趣，请看源码。
+
+   简要备注。
+   1. handle_args_fun返回字段或者字段list，这样底层会自动拼接成(1,2,3)的样子，满足90%需求，不支持原子做key，建议key还是数字，兼容性好。其他情况返回类似"(coin) ->\n"的字符串，底层会自动补上，只是唯一的支持上层扩展办法。
+   2. handle_result_fun支持record，tuple，list，single底层拼接，满足90%需求，另外10%估计是奇奇怪怪的，不需要满足，在上层写好返回值的字符串（不需要带";"），底层也会帮你拼接。这个功能，我自己在暂时也没用到。
+   3. record_conf, %% single, all, {more, FilterKey} FilterKey is Field atom or list,必须是原子或者整形的字段
+   4. filter某种程度使用来填扭蛋的坑，扭蛋那个生成根据友情抽和钻石抽即可，没必要分两个函数。filter默认是A->A的，表示保留有所有数据。filter会作用于最初的从数据库取出来的那份数据，保留这个函数所有需要的。具体看看data_module有用到这个字段的地方。
+   

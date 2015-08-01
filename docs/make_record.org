@@ -1,0 +1,20 @@
+* make_record相关文档
+
+** 简述
+   make_record是个从MySQL的表结构映射成erlang的record，从而可以简化内存数据和MySQL序列化的时候对应的问题。slg-server或者emysql底层是可以字段乱序，然后再根据名字弄回去正确的名字。而我们是规定好record的字段顺序和MySQL保持一致，简化设计，我看slg-server为此写了不少代码，slg-server是从csv加载数据，也是提供接口，上层扔配置即可，底层的代码略麻烦了点。
+
+** feature
+   1. 数据库配置和表的维护分离，最初为了方便（其实也方便不了啥，刚看之前的文档，花10min就改了），就将两个混在一起，但是数据库配置各个同学都不一样。所以现在只需要将表的配置加进版本管理即可。生成路径也是在数据库配置那边。
+   2. 每份文件的数据源都有相应的版本号（sha256之后转16进制取前6位），这样能确保同样的数据不会被再生成一次，增加无所谓的编译。
+   3. 根据需要指定生成单个表或者若干表（非全部），这样避免生成一些脏record，然后还用git checkout回去。
+   4. 支持命令行选项指定配置文件的路径
+
+** 使用细节
+   为了方便，建议Linux用户，可以将alias make_record="~/happytree/leshu_tools/sh/make_record"加入到~/.bashrc里面，这样就不用在特定路径下make_record了。（备注：这里用全路径是为了简化问题，加入PATH的话，bash文件没法加载env配置）。
+   
+   include路径设为全路径，这样在哪层目录运行make_record都有效。
+
+   数据库的字段的数据类型是varchar的，会尝试检查是否是erlang term，如果是的话，就用raw形式拼接，或者会加上双引号。term只认默认整形，tuple，list，其他不认。
+
+   如果是多项目的话，可以这样，制定配置文件
+   alias p02_make_record="~/happytree/leshu_tools/sh/make_record --db /home/roowe/happytree/server_p02/conf/make_record_db.conf --table /home/roowe/happytree/server_p02/conf/make_record_table.conf"

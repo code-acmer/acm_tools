@@ -1,0 +1,10 @@
+{application,tools,
+             [{description,[]},
+              {vsn,"1"},
+              {registered,[]},
+              {applications,[kernel,stdlib]},
+              {mod,{tools_app,[]}},
+              {env,[]},
+              {modules,[data_generate,data_module,data_module_ctl,
+                        define_to_db,make_record,table_to_record,tools_app,
+                        tools_sup]}]}.

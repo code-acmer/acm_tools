@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. `dirname $0`/env
+
+exec ${ERL_DIR}erl \
+    -pa $SERVER_EBIN_ROOT \
+    -args_file $VMARGS_PATH \
+    -name $SCRIPT_NAME$$@127.0.0.1 \
+    -boot start_clean \
+    -s data_module_ctl \
+    -extra "$@"
